@@ -86,24 +86,27 @@
                 let form = document.querySelector('#form');
 
                 form.addEventListener('submit', function (e) {
-                    e.preventDefault();
+                    // Au cas si le preventDefault ne marche pas (ex: IE10)
+                    e.preventDefault ? e.preventDefault() : (e.returnValue = false);
 
                     // on récupère le token sinon erreur 419
                     let token = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
                     // on récupère les valeurs
                     let email = document.querySelector('#exampleInputEmail1').value;
                     let name = document.querySelector('#exampleInputName').value;
                     let password = document.querySelector('#exampleInputPassword1').value;
 
-                    //Define your post url
-                    let url = '/admin/part/store';//Define redirect if needed
-                    let redirect = '/admin/part/list';//Select your form to clear data after sucessful post
+                    // On récupère la div error
+                    let errorElement = document.querySelector('#errors');
 
+                    // On récupère le tableau
+                    let table = document.querySelector('#tableBody');
 
                     if (window.fetch) {
+
                         // exécuter ma requête fetch ici
-
-
+                        // @link : https://developer.mozilla.org/fr/docs/Web/API/Fetch_API/Using_Fetch
                         let myInit = {
                             method: 'POST',
                             headers: {
@@ -139,33 +142,13 @@
                             })
                             .then(function (data) {
                                 // Une fois que j'ai passé le test je récupère les informations
-                                let isErrors = false;
-                                for (let i = 0; i < data.length; i++) {
-                                    if (data[i] === 'Errors') {
-                                        isErrors = true;
-                                        // Je supprime la valeur Errors qui ne me sert pas pour l'affichage
-                                        data.splice(i, 1);
-                                    }
-                                }
-                                let errorElement = document.querySelector('#errors');
                                 // Je vide toujours les erreurs au chargement
                                 errorElement.textContent = '';
-                                if (isErrors) {
-                                    errorElement.classList.remove('d-none');
-                                    for (let i = 0; i < data.length; i++) {
-                                        errorElement.insertAdjacentHTML('beforeend', data[i] + '<br>');
-                                    }
+                                if (data[0] === 'Errors') {
+                                    newError(data);
                                 } else {
-                                    // Si je n'ai pas d'erreur je vide le formulaire
-                                    form.reset();
-                                    errorElement.classList.add('d-none');
-                                    let table = document.querySelector('#tableBody');
-                                    table.insertAdjacentHTML('beforeend',
-                                        '<tr>' +
-                                        '<th scope="row">' + data.id + '</th>' +
-                                        '<td>' + data.name + '</td>' +
-                                        '<td>' + data.email + '</td>' +
-                                        '</tr>')
+                                    // Si je n'ai pas d'erreur je lance ma fonction
+                                    newTab(data);
                                 }
 
                             })
@@ -173,12 +156,69 @@
                                 // Ici l'erreur si le fetch n'a pas pu fonctionner
                                 console.log('Il y a eu un problème avec l\'opération fetch: ' + error.message);
                             });
-                    } else {
-                        // Faire quelque chose avec XMLHttpRequest?
-                        console.log('Ici on le fera en jQuery');
-                    }
-                });
-            })();
+
+                    } // Fin de Fetch
+                    else {
+                        // Execute ajax
+                        // @link: https://api.jquery.com/jquery.ajax/
+                        $.ajaxSetup({
+                            headers: {
+                                'X-CSRF-TOKEN': token
+                            }
+                        });
+                        $.ajax({
+                            url: "",
+                            method: "POST",
+                            data: {
+                                name: name,
+                                email: email,
+                                password: password
+                            },
+                            dataType: 'json',
+                            success: function (data) {
+                                // Si on a un code 200
+                                // puis si j'ai errors ou rien
+                                if (data[0] === 'Errors') {
+                                    newError(data);
+                                } else {
+                                    newTab(data);
+                                }
+                            },
+                            error: function (errors) {
+                                console.log(errors);
+                            }
+                        });
+                    } // Fin de jQuery
+
+                    /********************************************************************
+                     J'ai créé deux fonctions qui me permettent d'injecter les données
+                     ********************************************************************/
+                    let newTab = function(data) {
+                        // Si je n'ai pas d'erreur je vide le formulaire
+                        form.reset();
+                        errorElement.classList.add('d-none');
+
+                        table.insertAdjacentHTML('beforeend',
+                            '<tr>' +
+                            '<th scope="row">' + data.id + '</th>' +
+                            '<td>' + data.name + '</td>' +
+                            '<td>' + data.email + '</td>' +
+                            '</tr>');
+                    };
+
+                    let newError = function(errors) {
+                        errorElement.textContent = '';
+                        errorElement.classList.remove('d-none');
+                        // Je fais volontairement passer le compteur à 1
+                        // Pour ne pas afficher le Errors juste les messages
+                        for (let i = 1; i < errors.length; i++) {
+                            errorElement.insertAdjacentHTML('beforeend', errors[i] + '<br>');
+                        }
+                    };
+
+                }); // Fin de l'écouteur
+
+            })(); // Fin de mon script
         });
     </script>
 @endsection

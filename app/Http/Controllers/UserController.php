@@ -30,9 +30,9 @@ class UserController extends Controller
         // Mon stockage puis le renvois de la data vers la vue
 
         $values = $request->all();
-        $rules  = [
-            'email'     => 'email|required',
-            'name'  => 'string|nullable',
+        $rules = [
+            'email' => 'email|required',
+            'name' => 'string|nullable',
             'password' => 'string'
         ];
         $messages = [
@@ -43,15 +43,14 @@ class UserController extends Controller
 
         $validator = Validator::make($values, $rules, $messages);
 
-        // Je déclare une var $json vide
-        $json = '';
-        if($validator->fails()){
+        if ($validator->fails()) {
             // au lieu de retourner avec une session
             // on retourne avec un tableau
+            // je passe le message erreur en début de tableau
+            $json = $validator->errors()->all();
+            array_unshift($json, 'Errors');
 
-           $json = $validator->errors()->all();
-           $json[] .= 'Errors';
-           return json_encode($json);
+            return json_encode($json);
         }
 
         $user = new User();
